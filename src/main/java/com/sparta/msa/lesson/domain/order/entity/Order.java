@@ -51,7 +51,7 @@ public class Order {
   @Column(nullable = false, updatable = false)
   @CreationTimestamp
   LocalDateTime createdAt;
-
+  
   @Column(nullable = false)
   @UpdateTimestamp
   LocalDateTime updatedAt;
