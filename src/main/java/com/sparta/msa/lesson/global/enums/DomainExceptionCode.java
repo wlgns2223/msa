@@ -16,7 +16,10 @@ public enum DomainExceptionCode {
   MISSING_TOKEN(HttpStatus.UNAUTHORIZED, "토큰이 누락되었습니다."),
   UNAUTHORIZED_ACCESS(HttpStatus.UNAUTHORIZED, "인증되지 않은 접근입니다."),
   JSON_PROCESSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Json 데이터 처리 중 에러가 발생하였습니다."),
-  NOT_FOUND(HttpStatus.NOT_FOUND, "못 찾았습니다.");
+  NOT_FOUND(HttpStatus.NOT_FOUND, "못 찾았습니다."),
+  DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "중복된 이메일입니다."),
+  INVALID_DATA(HttpStatus.BAD_REQUEST, "잘 못된 데이터입니다."),
+  ;
 
   final HttpStatus status;
   final String message;

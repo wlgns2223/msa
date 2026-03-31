@@ -4,11 +4,13 @@ import com.sparta.msa.lesson.domain.user.dto.UserSearchResponse;
 import com.sparta.msa.lesson.domain.user.dto.request.UserRequest;
 import com.sparta.msa.lesson.domain.user.dto.response.UserResponse;
 import com.sparta.msa.lesson.domain.user.entity.User;
+import com.sparta.msa.lesson.domain.user.mapper.UserMapper;
 import com.sparta.msa.lesson.domain.user.repository.UserRepository;
 import com.sparta.msa.lesson.global.enums.DomainExceptionCode;
 import com.sparta.msa.lesson.global.exception.DomainException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,9 +18,19 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
   private final UserRepository userRepository;
+  private final UserMapper userMapper;
+  private final PasswordEncoder passwordEncoder;
 
   public UserResponse create(UserRequest request) {
-    return UserResponse.builder().build();
+
+    if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+      throw new DomainException(DomainExceptionCode.DUPLICATE_EMAIL);
+    }
+
+    String encodePassword = passwordEncoder.encode(request.getPassword());
+    User user = userMapper.toEntity(request, encodePassword);
+    User savedUser = userRepository.save(user);
+    return userMapper.toUserResponse(savedUser);
   }
 
   public List<UserSearchResponse> getAllUsers() {
