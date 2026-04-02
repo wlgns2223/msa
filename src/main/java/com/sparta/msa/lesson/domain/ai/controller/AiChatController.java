@@ -3,6 +3,7 @@ package com.sparta.msa.lesson.domain.ai.controller;
 import com.sparta.msa.lesson.domain.ai.dto.request.ContextChatRequest;
 import com.sparta.msa.lesson.domain.ai.dto.response.ContextChatResponse;
 import com.sparta.msa.lesson.domain.ai.service.AiChatService;
+import com.sparta.msa.lesson.domain.ai.service.PersistedChatService;
 import com.sparta.msa.lesson.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -17,21 +18,28 @@ import reactor.core.publisher.Flux;
 @RequestMapping("/api/ai")
 public class AiChatController {
 
-    private final AiChatService aiChatService;
+  private final AiChatService aiChatService;
+  private final PersistedChatService persistedChatService;
 
-    @PostMapping("/simple")
-    public ApiResponse<ContextChatResponse> simpleChat(@RequestBody ContextChatRequest request) {
-        return ApiResponse.ok(aiChatService.chat(request.getMessage()));
-    }
+  @PostMapping("/simple")
+  public ApiResponse<ContextChatResponse> simpleChat(@RequestBody ContextChatRequest request) {
+    return ApiResponse.ok(aiChatService.chat(request.getMessage()));
+  }
 
-    @PostMapping
-    public ApiResponse<ContextChatResponse> chat(@RequestBody ContextChatRequest request) {
-        return ApiResponse.ok(aiChatService.chatWithHistory(request.getMessage(), request.getConversationId()));
-    }
+//    @PostMapping
+//    public ApiResponse<ContextChatResponse> chat(@RequestBody ContextChatRequest request) {
+//        return ApiResponse.ok(aiChatService.chatWithHistory(request.getMessage(), request.getConversationId()));
+//    }
 
-    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamChat(@RequestBody ContextChatRequest request) {
-        return aiChatService.chatStream(request.getMessage());
-    }
+  @PostMapping
+  public ApiResponse<ContextChatResponse> chat(@RequestBody ContextChatRequest request) {
+    return ApiResponse.ok(
+        persistedChatService.chat(request.getConversationId(), request.getMessage()));
+  }
+
+  @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public Flux<String> streamChat(@RequestBody ContextChatRequest request) {
+    return aiChatService.chatStream(request.getMessage());
+  }
 
 }
