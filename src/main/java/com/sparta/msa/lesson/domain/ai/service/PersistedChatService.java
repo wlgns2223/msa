@@ -10,8 +10,10 @@ import com.sparta.msa.lesson.global.enums.DomainExceptionCode;
 import com.sparta.msa.lesson.global.enums.StatusType;
 import com.sparta.msa.lesson.global.exception.DomainException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -55,7 +57,7 @@ public class PersistedChatService {
         StatusType.ACTIVE
     );
 
-    List<Message> recentMessages = convertToMessages(messages);
+    List<Message> recentMessages = convertToMessages(messages, chatConversation);
 
     try {
       ChatResponse response = chatClient.prompt()
@@ -88,15 +90,67 @@ public class PersistedChatService {
 
   }
 
-  private List<Message> convertToMessages(List<ChatMessage> messages) {
+  private List<Message> convertToMessages(List<ChatMessage> messages,
+      ChatConversation conversation) {
     if (messages == null || messages.isEmpty()) {
       return List.of();
     }
 
     int start = Math.max(0, messages.size() - MAX_HISTORY_MESSAGES);
-    List<ChatMessage> limitedMessages = messages.subList(start, messages.size());
 
-    return limitedMessages.stream().map(this::mapToSpringAiMessage).toList();
+    if (start > 0) {
+
+      List<ChatMessage> limitedMessages = messages.subList(start, messages.size());
+      String summary = generateSummary(messages.subList(0, start));
+      messages.forEach(m -> m.setStatus(StatusType.INACTIVE));
+      chatMessageRepository.saveAll(messages);
+
+      ChatMessage summaryMessage = saveSummaryMessage(conversation, summary);
+
+      List<ChatMessage> result = new ArrayList<>();
+      result.add(summaryMessage);
+      result.addAll(limitedMessages);
+
+      return result.stream().map(this::mapToSpringAiMessage).toList();
+
+    }
+
+    return messages.stream().map(this::mapToSpringAiMessage).toList();
+  }
+
+  private ChatMessage saveSummaryMessage(ChatConversation conversation, String summary) {
+    return chatMessageRepository.save(ChatMessage.builder()
+        .conversation(conversation)
+        .role(ChatMessageType.SUMMARY)
+        .status(StatusType.ACTIVE)
+        .message(summary)
+        .build()
+    );
+  }
+
+  private String generateSummary(List<ChatMessage> messages) {
+    String conversationText = messages.stream()
+        .map(m -> m.getRole().name() + ": " + m.getMessage())
+        .collect(Collectors.joining("\n"));
+
+    String prompt = """
+        다음 대화 내용을 핵심 정보 위주로 간결하게 요약해줘.
+        요약은 향후 대화의 맥락으로 사용될 거야.
+        
+        대화내용:
+        %s
+        """.formatted(conversationText);
+
+    try {
+      return chatClient.prompt()
+          .user(prompt)
+          .call()
+          .content();
+
+    } catch (Exception e) {
+      log.error("대화내용 요약 실패");
+      throw new RuntimeException(e);
+    }
   }
 
   private Message mapToSpringAiMessage(ChatMessage entity) {
