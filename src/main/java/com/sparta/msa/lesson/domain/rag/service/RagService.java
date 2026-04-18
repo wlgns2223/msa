@@ -73,6 +73,7 @@ public class RagService {
             .preview(doc.getText().substring(0, Math.min(doc.getText().length(), 100)))
             .build())
         .toList();
+
     return RagResponse.builder()
         .answer(answer)
         .sources(sources)
